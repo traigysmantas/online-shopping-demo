@@ -9,8 +9,7 @@ import {
   Patch,
   Post,
   Query,
-  Request,
-  UnauthorizedException,
+  Session,
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -22,6 +21,7 @@ import { Serialize } from 'src/interceptors/serialize.interceptor';
 import { LocalAuthGuard } from 'src/auth/local-auth.guard';
 import { AuthenticatedGuard } from 'src/auth/auth.guard';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from 'src/decorators/current-user.decorator';
 
 @ApiTags('users')
 @Serialize(UserResponseDto)
@@ -52,8 +52,8 @@ export class UsersController {
   })
   @UseGuards(LocalAuthGuard)
   @Post('/login')
-  login(@Request() req) {
-    return req.user;
+  login(@CurrentUser() user: UserResponseDto) {
+    return user;
   }
 
   @ApiOperation({
@@ -65,8 +65,8 @@ export class UsersController {
   })
   @UseGuards(AuthenticatedGuard)
   @Get('/logout')
-  logout(@Request() req) {
-    req.session.destroy();
+  logout(@Session() session: any) {
+    session.destroy();
   }
 
   @UseGuards(AuthenticatedGuard)
@@ -82,9 +82,9 @@ export class UsersController {
   updateUser(
     @Param('id') id: string,
     @Body() body: UpdateUserDto,
-    @Request() req,
+    @CurrentUser('id') userId: string,
   ) {
-    if (id !== req.user.id) {
+    if (id !== userId) {
       throw new ForbiddenException('cannot update another user');
     }
     return this.usersService.updateById(id, body);
@@ -100,8 +100,8 @@ export class UsersController {
     type: UserResponseDto,
   })
   @Delete('/:id')
-  removeUser(@Param('id') id: string, @Request() req) {
-    if (id !== req.user.id) {
+  removeUser(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    if (id !== userId) {
       throw new ForbiddenException('cannot delete another user');
     }
     return this.usersService.removeById(id);

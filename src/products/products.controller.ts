@@ -9,7 +9,6 @@ import {
   Patch,
   Post,
   Query,
-  Request,
   UseGuards,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
@@ -19,6 +18,7 @@ import { UpdateProductDto } from './dtos/update-product.dto';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProductResponseDto } from './dtos/product-response.dto';
 import { Serialize } from 'src/interceptors/serialize.interceptor';
+import { CurrentUser } from 'src/decorators/current-user.decorator';
 
 @ApiTags('products')
 @Serialize(ProductResponseDto)
@@ -36,8 +36,7 @@ export class ProductsController {
     type: ProductResponseDto,
   })
   @Post()
-  createProduct(@Body() body: CreateProductDto, @Request() req) {
-    const id = req.user.id;
+  createProduct(@Body() body: CreateProductDto, @CurrentUser('id') id: string) {
     return this.productsService.create(body, id);
   }
 
@@ -53,9 +52,8 @@ export class ProductsController {
   async updateProduct(
     @Param('id') id: string,
     @Body() body: UpdateProductDto,
-    @Request() req,
+    @CurrentUser('id') userId: string,
   ) {
-    const userId = req.user.id;
     const product = await this.productsService.findUnique(id);
 
     if (!product) {
@@ -80,8 +78,10 @@ export class ProductsController {
     type: ProductResponseDto,
   })
   @Delete('/:id')
-  async removeProduct(@Param('id') id: string, @Request() req) {
-    const userId = req.user.id;
+  async removeProduct(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+  ) {
     const product = await this.productsService.findUnique(id);
 
     if (!product) {
